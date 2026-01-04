@@ -1,0 +1,8 @@
+# 忽略配置文件
+src/config.py
+
+# Python 缓存和临时文件
+__pycache__/
+*.pyc
+.env
+.history/

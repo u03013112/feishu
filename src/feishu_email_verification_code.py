@@ -20,18 +20,24 @@ except ImportError:
 # 设置日志级别
 logging.basicConfig(level=logging.INFO)
 
+import threading
+from collections import deque
+# 全局去重缓存
+processed_msg_ids = deque(maxlen=100)
+
 APP_ID = config.APP_ID
 APP_SECRET = config.APP_SECRET
 
-def say_notification(text):
-    """播放提示音 + 语音"""
+def play_sound_task(text):
     try:
-        # 1. 先播放一个清脆的系统提示音 (Glass)
         subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])
-        # 2. 再尝试朗读
         subprocess.run(["say", text])
     except Exception as e:
         print(f"音频播放失败: {e}")
+
+def say_notification(text):
+    """启动后台线程播放"""
+    threading.Thread(target=play_sound_task, args=(text,)).start()
 
 def extract_verification_code(content_json):
     """
@@ -82,6 +88,13 @@ def extract_verification_code(content_json):
 def do_p2_im_message_receive_v1(data: P2ImMessageReceiveV1) -> None:
     event = data.event
     message = event.message
+    
+    # 消息去重
+    msg_id = message.message_id
+    if msg_id in processed_msg_ids:
+        print(f"[重复消息] 已跳过: {msg_id}")
+        return
+    processed_msg_ids.append(msg_id)
     content = message.content
     msg_type = message.message_type
     
